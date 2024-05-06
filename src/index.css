@@ -1,0 +1,30 @@
+body {
+  margin: 0;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: white;
+}
+
+.chat-container {
+  width: 70vh;
+}
+
+.chat-bubble {
+  margin-bottom: 10px;
+  padding: 10px;
+  border-style: dashed;
+  border-color: rgba(22, 226, 155, 1);
+  max-width: 100%;
+}
+
+.chat-end {
+  align-self: flex-start;
+  background-color: red;
+}
+
+.chat-start {
+  align-self: flex-end;
+  background-color: blue;
+}
