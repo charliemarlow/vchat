@@ -39,15 +39,17 @@ export default class Subscriber {
   }
 
   subscribe(channels) {
+    const toSubscribe = channels.filter((channel) => {
+      return !this.subscriptionCounts.has(channel);
+    });
+
+    if (toSubscribe.length > 0) {
+      console.log('REDIS subscribe', toSubscribe);
+      this.redis.subscribe(toSubscribe);
+    }
     channels.forEach((channel) => {
       const count = this.subscriptionCounts.get(channel) || 0;
-      if (count > 0) {
-        this.subscriptionCounts.set(channel, count + 1);
-      } else {
-        this.subscriptionCounts.set(channel, 1);
-        console.log('REDIS subscribe', channel);
-        this.redis.subscribe(channel);
-      }
+      this.subscriptionCounts.set(channel, count + 1);
     });
     console.log('PubSub subscription counts', this.subscriptionCounts);
   }
