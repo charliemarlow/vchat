@@ -17,8 +17,10 @@ var Subscriber = /** @class */ (function () {
         var singletonChannels = channels.filter(function (channel) {
             return _this.subscriptionCounts.get(channel) === 1;
         });
-        console.log('REDIS unsubscribe', singletonChannels);
-        this.redis.unsubscribe(singletonChannels);
+        if (singletonChannels.length > 0) {
+            console.log('REDIS unsubscribe', singletonChannels);
+            this.redis.unsubscribe(singletonChannels);
+        }
         channels.forEach(function (channel) {
             var count = _this.subscriptionCounts.get(channel) || 0;
             if (count > 1) {

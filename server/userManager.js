@@ -53,6 +53,7 @@ var UserManager = /** @class */ (function () {
     function UserManager() {
         var _this = this;
         this.close = function () {
+            console.log('Closing user manager');
             _this.subscriber.close();
         };
         this.addUserSocket = function (userId, ws) { return __awaiter(_this, void 0, void 0, function () {

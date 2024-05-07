@@ -45,7 +45,7 @@ var SocketServer = /** @class */ (function () {
             var _this = this;
             return __generator(this, function (_a) {
                 this.wss.clients.forEach(function (ws) {
-                    if (ws.isAlive === true) {
+                    if (ws.isAlive === false) {
                         ws.terminate();
                         _this.userManager.removeUserSocket(ws.userId, ws);
                         return;
@@ -57,35 +57,31 @@ var SocketServer = /** @class */ (function () {
             });
         }); };
         this.onSocketConnection = function (ws, req) { return __awaiter(_this, void 0, void 0, function () {
-            var userId, found;
+            var userId;
             var _this = this;
             var _a;
             return __generator(this, function (_b) {
-                switch (_b.label) {
-                    case 0:
-                        userId = Number((_a = req.url) === null || _a === void 0 ? void 0 : _a.split('/')[1]);
-                        return [4 /*yield*/, this.userManager.addUserSocket(userId, ws)];
-                    case 1:
-                        found = _b.sent();
-                        if (!found) {
-                            ws.close();
-                            return [2 /*return*/];
-                        }
-                        ws.isAlive = true;
-                        ws.userId = userId;
-                        ws.on('error', console.error);
-                        ws.on('message', function (data) {
-                            console.log('Unexpectedly received: %s for user %s', data, userId);
-                        });
-                        ws.on('close', function () {
-                            console.log('User %s disconnected', userId);
-                            _this.userManager.removeUserSocket(userId, ws);
-                        });
-                        ws.on('pong', function () {
-                            ws.isAlive = true;
-                        });
-                        return [2 /*return*/];
-                }
+                userId = Number((_a = req.url) === null || _a === void 0 ? void 0 : _a.split('/')[1]);
+                this.userManager.addUserSocket(userId, ws)
+                    .then(function (success) {
+                    if (success)
+                        return;
+                    ws.close();
+                });
+                ws.isAlive = true;
+                ws.userId = userId;
+                ws.on('error', console.error);
+                ws.on('message', function (data) {
+                    console.log('Unexpectedly received: %s for user %s', data, userId);
+                });
+                ws.on('close', function () {
+                    console.log('User %s disconnected', userId);
+                    _this.userManager.removeUserSocket(userId, ws);
+                });
+                ws.on('pong', function () {
+                    ws.isAlive = true;
+                });
+                return [2 /*return*/];
             });
         }); };
         this.wss = new ws_1.WebSocketServer({ port: port });

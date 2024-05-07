@@ -21,8 +21,12 @@ export default class Subscriber {
     const singletonChannels = channels.filter((channel) => {
       return this.subscriptionCounts.get(channel) === 1;
     });
-    console.log('REDIS unsubscribe', singletonChannels);
-    this.redis.unsubscribe(singletonChannels);
+
+    if (singletonChannels.length > 0) {
+      console.log('REDIS unsubscribe', singletonChannels);
+      this.redis.unsubscribe(singletonChannels);
+    }
+
     channels.forEach((channel) => {
       const count = this.subscriptionCounts.get(channel) || 0;
       if (count > 1) {
