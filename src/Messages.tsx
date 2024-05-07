@@ -31,7 +31,7 @@ function ChatBubble ({
   );
 }
 
-export default function Messages({ userId }: { userId: number }) {
+export default function Messages({ userId, roomId }: { userId: number, roomId: number }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const currentUserId = userId;
 
@@ -73,8 +73,16 @@ export default function Messages({ userId }: { userId: number }) {
     }
   };
 
+  const loadMessages = async () => {
+    const response = await fetch(`http://localhost:3000/rooms/${roomId}/messages`);
+    const data = await response.json();
+    // only show most recent 4 messages
+    setMessages(data);
+  };
+
   useEffect(() => {
     setupWebSocket();
+    loadMessages();
 
     return () => {
       if (socket.current) {

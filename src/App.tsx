@@ -1,24 +1,12 @@
 import { useState } from 'react';
-import Messages from './Messages';
-import Rooms from './Rooms';
+import ChatRoom from './ChatRoom';
+import RoomsSidebar from './RoomsSidebar';
+import UsersInRoomSidebar from './UsersInRoomSidebar';
 
 function App() {
   const [userId, setUserId] = useState(null);
   const [username, setUsername] = useState('');
   const [roomId, setRoomId] = useState<number | null>(null);
-  const [newMessage, setNewMessage] = useState('');
-
-  const handleSendMessage = () => {
-    const requestOptions = {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId: userId, text: newMessage })
-    };
-    fetch('http://localhost:3000/rooms/1/messages', requestOptions)
-      .then(response => response.json())
-      .then(() => console.log('Message sent'));
-    setNewMessage('');
-  };
 
   const handleJoin = () => {
     const requestOptions = {
@@ -36,41 +24,30 @@ function App() {
 
   if (!userId) {
     return (
-      <div>
-        <input
-          type="text"
-          placeholder="Enter your username..."
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-        />
+      <form>
+        <label>
+          Enter your username:
+          <input
+            type="text"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+          />
+        </label>
         <button
           type="button"
           onClick={handleJoin}
         >
           Join
         </button>
-      </div>
+      </form>
     );
   }
 
   return (
     <div className="chat-container">
-      <Rooms userId={userId} setRoomId={setRoomId} />
-      <Messages userId={userId} />
-      <div>
-        <input
-          type="text"
-          placeholder="Type a message..."
-          value={newMessage}
-          onChange={(e) => setNewMessage(e.target.value)}
-        />
-        <button
-          type="button"
-          onClick={handleSendMessage}
-        >
-          Send
-        </button>
-      </div>
+      <RoomsSidebar userId={userId} setRoomId={setRoomId} />
+      {roomId && <ChatRoom userId={userId} roomId={roomId} />}
+      {roomId && <UsersInRoomSidebar userId={userId} roomId={roomId} />}
     </div>
   )
 }
