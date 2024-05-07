@@ -22,7 +22,11 @@ export default class SocketServer {
 
   private pingSockets = async () => {
     this.wss.clients.forEach((ws) => {
-      if (ws.isAlive === false) return ws.terminate();
+      if (ws.isAlive === false) {
+        ws.terminate();
+        this.userManager.removeUserSocket(ws.userId, ws);
+        return;
+      }
 
       ws.isAlive = false;
       ws.ping();
@@ -31,14 +35,14 @@ export default class SocketServer {
 
   private onSocketConnection = async (ws, req) => {
     const userId = Number(req.url?.split('/')[1]);
-    const found = await this.userManager.addUserSocket(userId, ws);
-
-    if (!found) {
-      ws.close();
-      return;
-    }
+    this.userManager.addUserSocket(userId, ws)
+      .then((success) => {
+        if (success) return;
+        ws.close();
+      });
 
     ws.isAlive = true;
+    ws.userId = userId;
 
     ws.on('error', console.error);
 

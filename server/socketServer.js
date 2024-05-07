@@ -42,10 +42,14 @@ var SocketServer = /** @class */ (function () {
     function SocketServer(port) {
         var _this = this;
         this.pingSockets = function () { return __awaiter(_this, void 0, void 0, function () {
+            var _this = this;
             return __generator(this, function (_a) {
                 this.wss.clients.forEach(function (ws) {
-                    if (ws.isAlive === false)
-                        return ws.terminate();
+                    if (ws.isAlive === true) {
+                        ws.terminate();
+                        _this.userManager.removeUserSocket(ws.userId, ws);
+                        return;
+                    }
                     ws.isAlive = false;
                     ws.ping();
                 });
@@ -68,6 +72,7 @@ var SocketServer = /** @class */ (function () {
                             return [2 /*return*/];
                         }
                         ws.isAlive = true;
+                        ws.userId = userId;
                         ws.on('error', console.error);
                         ws.on('message', function (data) {
                             console.log('Unexpectedly received: %s for user %s', data, userId);

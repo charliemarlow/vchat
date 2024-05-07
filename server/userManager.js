@@ -98,28 +98,7 @@ var UserManager = /** @class */ (function () {
                 return [2 /*return*/];
             });
         }); };
-        this.channelsForUser = function (userId) { return __awaiter(_this, void 0, void 0, function () {
-            var userInRooms, roomIds;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0: return [4 /*yield*/, prisma_1.default.userInRoom.findMany({
-                            where: { userId: userId },
-                        })];
-                    case 1:
-                        userInRooms = _a.sent();
-                        roomIds = userInRooms.map(function (uir) { return uir.roomId; });
-                        return [2 /*return*/, roomIds.map(function (roomId) {
-                                return "room-".concat(roomId);
-                            })];
-                }
-            });
-        }); };
-        this.subscriber = new subscriber_1.default();
-        this.userToSocket = new Map();
-        this.subscriber.listen(this.distributeMessage.bind(this));
-    }
-    UserManager.prototype.distributeMessage = function (channel, message) {
-        return __awaiter(this, void 0, void 0, function () {
+        this.distributeMessage = function (channel, message) { return __awaiter(_this, void 0, void 0, function () {
             var _a, roomId, id, room, msg;
             var _this = this;
             return __generator(this, function (_b) {
@@ -146,8 +125,27 @@ var UserManager = /** @class */ (function () {
                         return [2 /*return*/];
                 }
             });
-        });
-    };
+        }); };
+        this.channelsForUser = function (userId) { return __awaiter(_this, void 0, void 0, function () {
+            var userInRooms, roomIds;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, prisma_1.default.userInRoom.findMany({
+                            where: { userId: userId },
+                        })];
+                    case 1:
+                        userInRooms = _a.sent();
+                        roomIds = userInRooms.map(function (uir) { return uir.roomId; });
+                        return [2 /*return*/, roomIds.map(function (roomId) {
+                                return "room-".concat(roomId);
+                            })];
+                }
+            });
+        }); };
+        this.subscriber = new subscriber_1.default();
+        this.userToSocket = new Map();
+        this.subscriber.listen(this.distributeMessage.bind(this));
+    }
     return UserManager;
 }());
 exports.default = UserManager;
