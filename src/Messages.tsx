@@ -14,7 +14,6 @@ function ChatBubble ({
   currentUserId,
   message,
 }: { currentUserId: number, message: Message }) {
-  console.log('message', message);
   const chatType = message.userId === currentUserId ? 'chat-end' : 'chat-start';
   const messageTime = timeAgo.format(new Date(message.createdAt));
   return (
@@ -89,7 +88,7 @@ export default function Messages({ userId, roomId }: { userId: number, roomId: n
         socket.current.close();
       }
     };
-  }, []);
+  }, [roomId]);
 
   if (!isReady) {
     return <div>Connecting...</div>;

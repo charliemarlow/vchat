@@ -35,7 +35,7 @@ export default class Subscriber {
         this.subscriptionCounts.delete(channel);
       }
     });
-    console.log('PubSub subscription counts', this.subscriptionCounts);
+    console.log('After unsubscribe: subscription counts', this.subscriptionCounts);
   }
 
   subscribe(channels) {
@@ -51,6 +51,6 @@ export default class Subscriber {
       const count = this.subscriptionCounts.get(channel) || 0;
       this.subscriptionCounts.set(channel, count + 1);
     });
-    console.log('PubSub subscription counts', this.subscriptionCounts);
+    console.log('After subscribe: subscription counts', this.subscriptionCounts);
   }
 }

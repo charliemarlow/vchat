@@ -30,22 +30,22 @@ var Subscriber = /** @class */ (function () {
                 _this.subscriptionCounts.delete(channel);
             }
         });
-        console.log('PubSub subscription counts', this.subscriptionCounts);
+        console.log('After unsubscribe: subscription counts', this.subscriptionCounts);
     };
     Subscriber.prototype.subscribe = function (channels) {
         var _this = this;
+        var toSubscribe = channels.filter(function (channel) {
+            return !_this.subscriptionCounts.has(channel);
+        });
+        if (toSubscribe.length > 0) {
+            console.log('REDIS subscribe', toSubscribe);
+            this.redis.subscribe(toSubscribe);
+        }
         channels.forEach(function (channel) {
             var count = _this.subscriptionCounts.get(channel) || 0;
-            if (count > 0) {
-                _this.subscriptionCounts.set(channel, count + 1);
-            }
-            else {
-                _this.subscriptionCounts.set(channel, 1);
-                console.log('REDIS subscribe', channel);
-                _this.redis.subscribe(channel);
-            }
+            _this.subscriptionCounts.set(channel, count + 1);
         });
-        console.log('PubSub subscription counts', this.subscriptionCounts);
+        console.log('After subscribe: subscription counts', this.subscriptionCounts);
     };
     return Subscriber;
 }());

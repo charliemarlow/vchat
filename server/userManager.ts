@@ -18,31 +18,48 @@ export default class UserManager {
   }
 
   addUserSocket = async (userId, ws) => {
+    console.log('ADDING SOCKET', userId, this.userToSocket.get(userId)?.length, ws.id);
     const user = await prisma.user.findUnique({
       where: { id: userId }
     })
 
-    if (!user) {
+    if (!user || ws.readyState !== WebSocket.OPEN) {
+      // early exit if the socket is already closed
+      console.log('Socket closed before adding', ws.id);
       return false;
     }
 
     const connectedSockets = this.userToSocket.get(user.id) || [];
     this.userToSocket.set(user.id, [...connectedSockets, ws]);
 
-    this.channelsForUser(user.id).then((channelNames) => {
-      this.subscriber.subscribe(channelNames);
-    });
+    const channelNames = await this.channelsForUser(user.id);
+
+    if (ws.readyState !== WebSocket.OPEN) {
+      // early exit if the socket is already closed
+      console.log('Socket closed before subscribing', ws.id);
+      return false;
+    }
+    console.log('Go to subscribe', channelNames, ws.id);
+    ws.subscribed = true;
+    this.subscriber.subscribe(channelNames);
 
     return true;
   };
 
   removeUserSocket = async (userId, ws) => {
     const connectedSockets = this.userToSocket.get(userId);
-
-    if (!connectedSockets) return;
+    console.log('REMOVING SOCKET', userId, connectedSockets?.length, ws.id);
+    if (!connectedSockets) {
+      return;
+    }
 
     // remove just this websocket from the list of connected sockets
     const remainingSockets = connectedSockets.filter((socket) => socket !== ws);
+    if (remainingSockets.length === connectedSockets.length) {
+      // if the socket was not found, do nothing
+      console.log('Socket not found at removal', ws.id);
+      return;
+    }
 
     // if the removal is the last socket, remove the user from the map
     if (remainingSockets.length > 0) {
@@ -51,9 +68,16 @@ export default class UserManager {
       this.userToSocket.delete(userId);
     }
 
-    this.channelsForUser(userId).then((channelNames) => {
-      this.subscriber.unsubscribe(channelNames);
-    });
+    const channelNames = await this.channelsForUser(userId)
+
+    if (!ws.subscribed) {
+      // If the socket closed before subscribing, then we
+      // don't need to unsubscribe
+      console.log('No need to unsubscribe', ws.id);
+      return;
+    }
+    console.log('Go to unsubscribe', channelNames, ws.id);
+    this.subscriber.unsubscribe(channelNames);
   };
 
   private distributeMessage = async (channel, message) => {

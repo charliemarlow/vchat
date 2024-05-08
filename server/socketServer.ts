@@ -1,5 +1,6 @@
 import { WebSocketServer } from 'ws';
 import UserManager from './userManager';
+import { v4 as uuidv4 } from 'uuid';
 
 export default class SocketServer {
   private wss: WebSocketServer;
@@ -23,6 +24,7 @@ export default class SocketServer {
   private pingSockets = async () => {
     this.wss.clients.forEach((ws) => {
       if (ws.isAlive === false) {
+        console.log('Terminating connection to user %s', ws.userId);
         ws.terminate();
         this.userManager.removeUserSocket(ws.userId, ws);
         return;
@@ -35,6 +37,7 @@ export default class SocketServer {
 
   private onSocketConnection = async (ws, req) => {
     const userId = Number(req.url?.split('/')[1]);
+    ws.id = uuidv4();
     this.userManager.addUserSocket(userId, ws)
       .then((success) => {
         if (success) return;

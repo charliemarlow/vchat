@@ -38,6 +38,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 Object.defineProperty(exports, "__esModule", { value: true });
 var ws_1 = require("ws");
 var userManager_1 = require("./userManager");
+var uuid_1 = require("uuid");
 var SocketServer = /** @class */ (function () {
     function SocketServer(port) {
         var _this = this;
@@ -46,6 +47,7 @@ var SocketServer = /** @class */ (function () {
             return __generator(this, function (_a) {
                 this.wss.clients.forEach(function (ws) {
                     if (ws.isAlive === false) {
+                        console.log('Terminating connection to user %s', ws.userId);
                         ws.terminate();
                         _this.userManager.removeUserSocket(ws.userId, ws);
                         return;
@@ -62,6 +64,7 @@ var SocketServer = /** @class */ (function () {
             var _a;
             return __generator(this, function (_b) {
                 userId = Number((_a = req.url) === null || _a === void 0 ? void 0 : _a.split('/')[1]);
+                ws.id = (0, uuid_1.v4)();
                 this.userManager.addUserSocket(userId, ws)
                     .then(function (success) {
                     if (success)

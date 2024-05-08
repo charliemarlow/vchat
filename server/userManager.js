@@ -53,50 +53,78 @@ var UserManager = /** @class */ (function () {
     function UserManager() {
         var _this = this;
         this.close = function () {
-            console.log('Closing user manager');
             _this.subscriber.close();
         };
         this.addUserSocket = function (userId, ws) { return __awaiter(_this, void 0, void 0, function () {
-            var user, connectedSockets;
-            var _this = this;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0: return [4 /*yield*/, prisma_1.default.user.findUnique({
-                            where: { id: userId }
-                        })];
+            var user, connectedSockets, channelNames;
+            var _a;
+            return __generator(this, function (_b) {
+                switch (_b.label) {
+                    case 0:
+                        console.log('ADDING SOCKET', userId, (_a = this.userToSocket.get(userId)) === null || _a === void 0 ? void 0 : _a.length, ws.id);
+                        return [4 /*yield*/, prisma_1.default.user.findUnique({
+                                where: { id: userId }
+                            })];
                     case 1:
-                        user = _a.sent();
-                        if (!user) {
+                        user = _b.sent();
+                        if (!user || ws.readyState !== ws_1.WebSocket.OPEN) {
+                            // early exit if the socket is already closed
+                            console.log('BUG: Socket closed before adding', ws.id);
                             return [2 /*return*/, false];
                         }
                         connectedSockets = this.userToSocket.get(user.id) || [];
                         this.userToSocket.set(user.id, __spreadArray(__spreadArray([], connectedSockets, true), [ws], false));
-                        this.channelsForUser(user.id).then(function (channelNames) {
-                            _this.subscriber.subscribe(channelNames);
-                        });
+                        return [4 /*yield*/, this.channelsForUser(user.id)];
+                    case 2:
+                        channelNames = _b.sent();
+                        if (ws.readyState !== ws_1.WebSocket.OPEN) {
+                            // early exit if the socket is already closed
+                            console.log('BUG: Socket closed before subscribing', ws.id);
+                            return [2 /*return*/, false];
+                        }
+                        console.log('Go to subscribe', channelNames, ws.id);
+                        ws.subscribed = true;
+                        this.subscriber.subscribe(channelNames);
                         return [2 /*return*/, true];
                 }
             });
         }); };
         this.removeUserSocket = function (userId, ws) { return __awaiter(_this, void 0, void 0, function () {
-            var connectedSockets, remainingSockets;
-            var _this = this;
+            var connectedSockets, remainingSockets, channelNames;
             return __generator(this, function (_a) {
-                connectedSockets = this.userToSocket.get(userId);
-                if (!connectedSockets)
-                    return [2 /*return*/];
-                remainingSockets = connectedSockets.filter(function (socket) { return socket !== ws; });
-                // if the removal is the last socket, remove the user from the map
-                if (remainingSockets.length > 0) {
-                    this.userToSocket.set(userId, remainingSockets);
+                switch (_a.label) {
+                    case 0:
+                        connectedSockets = this.userToSocket.get(userId);
+                        console.log('REMOVING SOCKET', userId, connectedSockets === null || connectedSockets === void 0 ? void 0 : connectedSockets.length, ws.id);
+                        if (!connectedSockets) {
+                            return [2 /*return*/];
+                        }
+                        remainingSockets = connectedSockets.filter(function (socket) { return socket !== ws; });
+                        if (remainingSockets.length === connectedSockets.length) {
+                            // if the socket was not found, do nothing
+                            console.log('BUG: Socket not found at removal', ws.id);
+                            return [2 /*return*/];
+                        }
+                        // if the removal is the last socket, remove the user from the map
+                        if (remainingSockets.length > 0) {
+                            this.userToSocket.set(userId, remainingSockets);
+                        }
+                        else {
+                            this.userToSocket.delete(userId);
+                        }
+                        return [4 /*yield*/, this.channelsForUser(userId)];
+                    case 1:
+                        channelNames = _a.sent();
+                        if (!ws.subscribed) {
+                            // If the socket closed before subscribing, then we
+                            // don't need to unsubscribe
+                            console.log('BUG: no need to unsubscribe', ws.id);
+                            return [2 /*return*/];
+                        }
+                        console.log('Go to unsubscribe', channelNames, ws.id);
+                        this.subscriber.unsubscribe(channelNames);
+                        return [2 /*return*/];
                 }
-                else {
-                    this.userToSocket.delete(userId);
-                }
-                this.channelsForUser(userId).then(function (channelNames) {
-                    _this.subscriber.unsubscribe(channelNames);
-                });
-                return [2 /*return*/];
             });
         }); };
         this.distributeMessage = function (channel, message) { return __awaiter(_this, void 0, void 0, function () {

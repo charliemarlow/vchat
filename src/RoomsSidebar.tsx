@@ -20,7 +20,10 @@ export default function RoomsSidebar(
     return (
       <li
         key={room.id}
-        onClick={() => setRoomId(room.id)}
+        onClick={() => {
+          console.log('Room selected:', room.id);
+          setRoomId(room.id);
+        }}
         className={`room ${selected}`}
        >
         {room.name}

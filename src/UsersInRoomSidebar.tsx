@@ -9,7 +9,7 @@ export default function UsersInRoomSidebar({ userId, roomId }: { userId: number,
       .then((users) => {
         setUsers(users);
       });
-  }, []);
+  }, [roomId]);
 
   const usersList = users.map((user: any) => {
     const status = user.id === userId ? 'online' : 'offline';
