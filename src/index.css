@@ -1,1 +1,28 @@
 
+.chat-container {
+  display: flex;
+  justify-content: space-evenly;
+}
+
+.chat-container > div {
+  border: 1px solid #000;
+  height: 80vh;
+}
+
+.messages {
+  height: 100%;
+  overflow: scroll;
+  display: flex;
+  flex-direction: column-reverse;
+}
+
+.chat-room {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: flex-end;
+}
+
+li:hover {
+  cursor:default;
+}

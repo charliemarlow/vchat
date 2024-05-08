@@ -18,7 +18,7 @@ export default function ChatRoom({ userId, roomId }: { userId: number, roomId: n
   };
 
   return (
-    <div>
+    <div className="chat-room">
       <Messages userId={userId} roomId={roomId} />
       <div>
         <input

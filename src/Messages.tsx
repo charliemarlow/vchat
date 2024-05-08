@@ -95,10 +95,10 @@ export default function Messages({ userId, roomId }: { userId: number, roomId: n
   }
 
   return (
-    <>
+    <div className="messages test">
       {messages.map((message) => (
         <ChatBubble key={message.id} message={message} currentUserId={currentUserId} />
       ))}
-    </>
+    </div>
   );
 };
