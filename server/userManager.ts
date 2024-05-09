@@ -5,11 +5,9 @@ import Room from './room';
 
 export default class UserManager {
   private subscriber: Subscriber;
-  private userToSocket: Map<number, WebSocket[]>;
 
   constructor() {
     this.subscriber = new Subscriber();
-    this.userToSocket = new Map();
     this.subscriber.listen(this.distributeMessage.bind(this));
   }
 
@@ -18,7 +16,7 @@ export default class UserManager {
   }
 
   addUserSocket = async (userId, ws) => {
-    console.log('ADDING SOCKET', userId, this.userToSocket.get(userId)?.length, ws.id);
+    console.log('ADDING SOCKET', userId, ws.id);
     const user = await prisma.user.findUnique({
       where: { id: userId }
     })
@@ -29,9 +27,6 @@ export default class UserManager {
       return false;
     }
 
-    const connectedSockets = this.userToSocket.get(user.id) || [];
-    this.userToSocket.set(user.id, [...connectedSockets, ws]);
-
     const channelNames = await this.channelsForUser(user.id);
 
     if (ws.readyState !== WebSocket.OPEN) {
@@ -41,32 +36,13 @@ export default class UserManager {
     }
     console.log('Go to subscribe', channelNames, ws.id);
     ws.subscribed = true;
-    this.subscriber.subscribe(channelNames);
+    this.subscriber.subscribe(channelNames, ws);
 
     return true;
   };
 
   removeUserSocket = async (userId, ws) => {
-    const connectedSockets = this.userToSocket.get(userId);
-    console.log('REMOVING SOCKET', userId, connectedSockets?.length, ws.id);
-    if (!connectedSockets) {
-      return;
-    }
-
-    // remove just this websocket from the list of connected sockets
-    const remainingSockets = connectedSockets.filter((socket) => socket !== ws);
-    if (remainingSockets.length === connectedSockets.length) {
-      // if the socket was not found, do nothing
-      console.log('Socket not found at removal', ws.id);
-      return;
-    }
-
-    // if the removal is the last socket, remove the user from the map
-    if (remainingSockets.length > 0) {
-      this.userToSocket.set(userId, remainingSockets);
-    } else {
-      this.userToSocket.delete(userId);
-    }
+    console.log('REMOVING SOCKET', userId, ws.id);
 
     const channelNames = await this.channelsForUser(userId)
 
@@ -77,28 +53,22 @@ export default class UserManager {
       return;
     }
     console.log('Go to unsubscribe', channelNames, ws.id);
-    this.subscriber.unsubscribe(channelNames);
+    this.subscriber.unsubscribe(channelNames, ws);
   };
 
   private distributeMessage = async (channel, message) => {
     const { roomId, id } = JSON.parse(message);
 
     console.log('RECEIVED MESSAGE', roomId, id, channel);
-    const room = new Room(roomId);
     const msg = await prisma.message.findUnique({
       where: { id: id }
     });
 
-    room.getUsers().then((users) => {
-      users.forEach((user) => {
-        const sockets = this.userToSocket.get(user.id) || [];
-
-        sockets.forEach((socket) => {
-          if (socket.readyState === WebSocket.OPEN) {
-            socket.send(JSON.stringify(msg));
-          }
-        });
-      });
+    const sockets = this.subscriber.socketsForChannel(channel);
+    sockets.forEach((socket) => {
+      if (socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify(msg));
+      }
     });
   }
 

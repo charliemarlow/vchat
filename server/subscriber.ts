@@ -1,12 +1,15 @@
 import Redis from 'ioredis';
+import { WebSocket } from 'ws';
 
 export default class Subscriber {
   redis: Redis;
-  subscriptionCounts: Map<string, number>;
+  socketIDsByChannel: Map<string, Set<string>>;
+  socketByID: Map<string, WebSocket>;
 
   constructor() {
     this.redis = new Redis();
-    this.subscriptionCounts = new Map();
+    this.socketIDsByChannel = new Map<string, Set<string>>();
+    this.socketByID = new Map();
   }
 
   listen(callback) {
@@ -17,40 +20,61 @@ export default class Subscriber {
     this.redis.disconnect();
   }
 
-  unsubscribe(channels) {
-    const singletonChannels = channels.filter((channel) => {
-      return this.subscriptionCounts.get(channel) === 1;
+  socketsForChannel(channel: string) {
+    const socketIDs = this.socketIDsByChannel.get(channel);
+    const sockets: WebSocket[] = [];
+
+    if (!socketIDs) return sockets;
+
+    socketIDs.forEach((socketID) => {
+      const socket: WebSocket = this.socketByID.get(socketID);
+      if (socket) sockets.push(socket);
     });
 
-    if (singletonChannels.length > 0) {
-      console.log('REDIS unsubscribe', singletonChannels);
-      this.redis.unsubscribe(singletonChannels);
-    }
-
-    channels.forEach((channel) => {
-      const count = this.subscriptionCounts.get(channel) || 0;
-      if (count > 1) {
-        this.subscriptionCounts.set(channel, count - 1);
-      } else {
-        this.subscriptionCounts.delete(channel);
-      }
-    });
-    console.log('After unsubscribe: subscription counts', this.subscriptionCounts);
+    return sockets;
   }
 
-  subscribe(channels) {
-    const toSubscribe = channels.filter((channel) => {
-      return !this.subscriptionCounts.has(channel);
+  unsubscribe(channels: string[], ws) {
+    this.socketByID.delete(ws.id);
+
+    const singletonChannels: string[] = [];
+    channels.forEach((channel) => {
+      const sockets = this.socketIDsByChannel.get(channel) || new Set<string>();
+
+      if (!sockets.has(ws.id)) return;
+
+      sockets.delete(ws.id);
+      if (sockets.size > 0) return;
+
+      singletonChannels.push(channel);
+      this.socketIDsByChannel.delete(channel);
     });
 
-    if (toSubscribe.length > 0) {
-      console.log('REDIS subscribe', toSubscribe);
-      this.redis.subscribe(toSubscribe);
-    }
-    channels.forEach((channel) => {
-      const count = this.subscriptionCounts.get(channel) || 0;
-      this.subscriptionCounts.set(channel, count + 1);
+    console.log('After subscribe: subscription counts', this.socketIDsByChannel);
+
+    if (singletonChannels.length === 0) return;
+
+    console.log('REDIS unsubscribe', singletonChannels);
+    this.redis.unsubscribe(...singletonChannels);
+  }
+
+  subscribe(channels, ws) {
+    this.socketByID.set(ws.id, ws);
+
+    const toSubscribe: string[] = channels.filter((channel) => {
+      return !this.socketIDsByChannel.has(channel);
     });
-    console.log('After subscribe: subscription counts', this.subscriptionCounts);
+    channels.forEach((channel) => {
+      const socketSet = this.socketIDsByChannel.get(channel) || new Set<string>();
+      socketSet.add(ws.id);
+      this.socketIDsByChannel.set(channel, socketSet);
+    });
+
+    console.log('After subscribe: subscription counts', this.socketIDsByChannel);
+
+    if (toSubscribe.length === 0) return;
+
+    console.log('REDIS subscribe', toSubscribe);
+    this.redis.subscribe(...toSubscribe);
   }
 }

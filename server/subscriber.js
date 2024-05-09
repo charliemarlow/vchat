@@ -4,7 +4,8 @@ var ioredis_1 = require("ioredis");
 var Subscriber = /** @class */ (function () {
     function Subscriber() {
         this.redis = new ioredis_1.default();
-        this.subscriptionCounts = new Map();
+        this.socketIDsByChannel = new Map();
+        this.socketByID = new Map();
     }
     Subscriber.prototype.listen = function (callback) {
         this.redis.on('message', callback);
@@ -12,40 +13,57 @@ var Subscriber = /** @class */ (function () {
     Subscriber.prototype.close = function () {
         this.redis.disconnect();
     };
-    Subscriber.prototype.unsubscribe = function (channels) {
+    Subscriber.prototype.socketsForChannel = function (channel) {
         var _this = this;
-        var singletonChannels = channels.filter(function (channel) {
-            return _this.subscriptionCounts.get(channel) === 1;
+        var socketIDs = this.socketIDsByChannel.get(channel);
+        var sockets = [];
+        if (!socketIDs)
+            return sockets;
+        socketIDs.forEach(function (socketID) {
+            var socket = _this.socketByID.get(socketID);
+            if (socket)
+                sockets.push(socket);
         });
-        if (singletonChannels.length > 0) {
-            console.log('REDIS unsubscribe', singletonChannels);
-            this.redis.unsubscribe(singletonChannels);
-        }
-        channels.forEach(function (channel) {
-            var count = _this.subscriptionCounts.get(channel) || 0;
-            if (count > 1) {
-                _this.subscriptionCounts.set(channel, count - 1);
-            }
-            else {
-                _this.subscriptionCounts.delete(channel);
-            }
-        });
-        console.log('After unsubscribe: subscription counts', this.subscriptionCounts);
+        return sockets;
     };
-    Subscriber.prototype.subscribe = function (channels) {
+    Subscriber.prototype.unsubscribe = function (channels, ws) {
+        var _a;
         var _this = this;
-        var toSubscribe = channels.filter(function (channel) {
-            return !_this.subscriptionCounts.has(channel);
-        });
-        if (toSubscribe.length > 0) {
-            console.log('REDIS subscribe', toSubscribe);
-            this.redis.subscribe(toSubscribe);
-        }
+        this.socketByID.delete(ws.id);
+        var singletonChannels = [];
         channels.forEach(function (channel) {
-            var count = _this.subscriptionCounts.get(channel) || 0;
-            _this.subscriptionCounts.set(channel, count + 1);
+            var sockets = _this.socketIDsByChannel.get(channel) || new Set();
+            if (!sockets.has(ws.id))
+                return;
+            sockets.delete(ws.id);
+            if (sockets.size > 0)
+                return;
+            singletonChannels.push(channel);
+            _this.socketIDsByChannel.delete(channel);
         });
-        console.log('After subscribe: subscription counts', this.subscriptionCounts);
+        console.log('After subscribe: subscription counts', this.socketIDsByChannel);
+        if (singletonChannels.length === 0)
+            return;
+        console.log('REDIS unsubscribe', singletonChannels);
+        (_a = this.redis).unsubscribe.apply(_a, singletonChannels);
+    };
+    Subscriber.prototype.subscribe = function (channels, ws) {
+        var _a;
+        var _this = this;
+        this.socketByID.set(ws.id, ws);
+        var toSubscribe = channels.filter(function (channel) {
+            return !_this.socketIDsByChannel.has(channel);
+        });
+        channels.forEach(function (channel) {
+            var socketSet = _this.socketIDsByChannel.get(channel) || new Set();
+            socketSet.add(ws.id);
+            _this.socketIDsByChannel.set(channel, socketSet);
+        });
+        console.log('After subscribe: subscription counts', this.socketIDsByChannel);
+        if (toSubscribe.length === 0)
+            return;
+        console.log('REDIS subscribe', toSubscribe);
+        (_a = this.redis).subscribe.apply(_a, toSubscribe);
     };
     return Subscriber;
 }());

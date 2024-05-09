@@ -35,20 +35,10 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
-var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
-    if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
-        if (ar || !(i in from)) {
-            if (!ar) ar = Array.prototype.slice.call(from, 0, i);
-            ar[i] = from[i];
-        }
-    }
-    return to.concat(ar || Array.prototype.slice.call(from));
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 var ws_1 = require("ws");
 var prisma_1 = require("./prisma");
 var subscriber_1 = require("./subscriber");
-var room_1 = require("./room");
 var UserManager = /** @class */ (function () {
     function UserManager() {
         var _this = this;
@@ -56,100 +46,74 @@ var UserManager = /** @class */ (function () {
             _this.subscriber.close();
         };
         this.addUserSocket = function (userId, ws) { return __awaiter(_this, void 0, void 0, function () {
-            var user, connectedSockets, channelNames;
-            var _a;
-            return __generator(this, function (_b) {
-                switch (_b.label) {
+            var user, channelNames;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
                     case 0:
-                        console.log('ADDING SOCKET', userId, (_a = this.userToSocket.get(userId)) === null || _a === void 0 ? void 0 : _a.length, ws.id);
+                        console.log('ADDING SOCKET', userId, ws.id);
                         return [4 /*yield*/, prisma_1.default.user.findUnique({
                                 where: { id: userId }
                             })];
                     case 1:
-                        user = _b.sent();
+                        user = _a.sent();
                         if (!user || ws.readyState !== ws_1.WebSocket.OPEN) {
                             // early exit if the socket is already closed
-                            console.log('BUG: Socket closed before adding', ws.id);
+                            console.log('Socket closed before adding', ws.id);
                             return [2 /*return*/, false];
                         }
-                        connectedSockets = this.userToSocket.get(user.id) || [];
-                        this.userToSocket.set(user.id, __spreadArray(__spreadArray([], connectedSockets, true), [ws], false));
                         return [4 /*yield*/, this.channelsForUser(user.id)];
                     case 2:
-                        channelNames = _b.sent();
+                        channelNames = _a.sent();
                         if (ws.readyState !== ws_1.WebSocket.OPEN) {
                             // early exit if the socket is already closed
-                            console.log('BUG: Socket closed before subscribing', ws.id);
+                            console.log('Socket closed before subscribing', ws.id);
                             return [2 /*return*/, false];
                         }
                         console.log('Go to subscribe', channelNames, ws.id);
                         ws.subscribed = true;
-                        this.subscriber.subscribe(channelNames);
+                        this.subscriber.subscribe(channelNames, ws);
                         return [2 /*return*/, true];
                 }
             });
         }); };
         this.removeUserSocket = function (userId, ws) { return __awaiter(_this, void 0, void 0, function () {
-            var connectedSockets, remainingSockets, channelNames;
+            var channelNames;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
-                        connectedSockets = this.userToSocket.get(userId);
-                        console.log('REMOVING SOCKET', userId, connectedSockets === null || connectedSockets === void 0 ? void 0 : connectedSockets.length, ws.id);
-                        if (!connectedSockets) {
-                            return [2 /*return*/];
-                        }
-                        remainingSockets = connectedSockets.filter(function (socket) { return socket !== ws; });
-                        if (remainingSockets.length === connectedSockets.length) {
-                            // if the socket was not found, do nothing
-                            console.log('BUG: Socket not found at removal', ws.id);
-                            return [2 /*return*/];
-                        }
-                        // if the removal is the last socket, remove the user from the map
-                        if (remainingSockets.length > 0) {
-                            this.userToSocket.set(userId, remainingSockets);
-                        }
-                        else {
-                            this.userToSocket.delete(userId);
-                        }
+                        console.log('REMOVING SOCKET', userId, ws.id);
                         return [4 /*yield*/, this.channelsForUser(userId)];
                     case 1:
                         channelNames = _a.sent();
                         if (!ws.subscribed) {
                             // If the socket closed before subscribing, then we
                             // don't need to unsubscribe
-                            console.log('BUG: no need to unsubscribe', ws.id);
+                            console.log('No need to unsubscribe', ws.id);
                             return [2 /*return*/];
                         }
                         console.log('Go to unsubscribe', channelNames, ws.id);
-                        this.subscriber.unsubscribe(channelNames);
+                        this.subscriber.unsubscribe(channelNames, ws);
                         return [2 /*return*/];
                 }
             });
         }); };
         this.distributeMessage = function (channel, message) { return __awaiter(_this, void 0, void 0, function () {
-            var _a, roomId, id, room, msg;
-            var _this = this;
+            var _a, roomId, id, msg, sockets;
             return __generator(this, function (_b) {
                 switch (_b.label) {
                     case 0:
                         _a = JSON.parse(message), roomId = _a.roomId, id = _a.id;
                         console.log('RECEIVED MESSAGE', roomId, id, channel);
-                        room = new room_1.default(roomId);
                         return [4 /*yield*/, prisma_1.default.message.findUnique({
                                 where: { id: id }
                             })];
                     case 1:
                         msg = _b.sent();
-                        room.getUsers().then(function (users) {
-                            users.forEach(function (user) {
-                                var sockets = _this.userToSocket.get(user.id) || [];
-                                sockets.forEach(function (socket) {
-                                    if (socket.readyState === ws_1.WebSocket.OPEN) {
-                                        socket.send(JSON.stringify(msg));
-                                    }
-                                });
-                            });
+                        sockets = this.subscriber.socketsForChannel(channel);
+                        sockets.forEach(function (socket) {
+                            if (socket.readyState === ws_1.WebSocket.OPEN) {
+                                socket.send(JSON.stringify(msg));
+                            }
                         });
                         return [2 /*return*/];
                 }
@@ -172,7 +136,6 @@ var UserManager = /** @class */ (function () {
             });
         }); };
         this.subscriber = new subscriber_1.default();
-        this.userToSocket = new Map();
         this.subscriber.listen(this.distributeMessage.bind(this));
     }
     return UserManager;
