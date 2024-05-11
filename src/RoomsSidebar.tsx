@@ -32,7 +32,7 @@ export default function RoomsSidebar(
   });
 
   return (
-    <div>
+    <div className="sidebar">
       <h1>Chat rooms</h1>
       <ul>{roomsList}</ul>
     </div>

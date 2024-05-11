@@ -23,7 +23,7 @@ export default function UsersInRoomSidebar({ userId, roomId }: { userId: number,
   });
 
   return (
-    <div>
+    <div id="users-in-room">
       <h1>Users in Room</h1>
       <ul>{usersList}</ul>
     </div>

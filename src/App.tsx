@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import ChatRoom from './ChatRoom';
 import RoomsSidebar from './RoomsSidebar';
-import UsersInRoomSidebar from './UsersInRoomSidebar';
 
 function App() {
   const [userId, setUserId] = useState(null);
@@ -24,7 +23,7 @@ function App() {
 
   if (!userId) {
     return (
-      <form>
+      <form className="sign-up">
         <label>
           Enter your username:
           <input
@@ -44,11 +43,10 @@ function App() {
   }
 
   return (
-    <div className="chat-container">
+    <>
       <RoomsSidebar userId={userId} setRoomId={setRoomId} />
       {roomId && <ChatRoom userId={userId} roomId={roomId} />}
-      {roomId && <UsersInRoomSidebar userId={userId} roomId={roomId} />}
-    </div>
+    </>
   )
 }
 

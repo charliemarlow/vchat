@@ -37,6 +37,7 @@ export default function Messages({ userId, roomId }: { userId: number, roomId: n
   const [isReady, setIsReady] = useState(false);
 
   const socket = useRef<WebSocket | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const setupWebSocket = () => {
     try {
@@ -62,8 +63,12 @@ export default function Messages({ userId, roomId }: { userId: number, roomId: n
           if (messages.some((m) => m.id === message.id)) {
             return messages;
           }
-          return [...messages, message];
+          return [message, ...messages];
         });
+
+        if (messagesEndRef.current) {
+          messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+        }
       });
 
       socket.current = ws;
@@ -96,6 +101,7 @@ export default function Messages({ userId, roomId }: { userId: number, roomId: n
 
   return (
     <div className="messages test">
+      <div ref={messagesEndRef} />
       {messages.map((message) => (
         <ChatBubble key={message.id} message={message} currentUserId={currentUserId} />
       ))}

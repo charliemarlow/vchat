@@ -1,6 +1,7 @@
 
 import { useState } from 'react';
 import Messages from './Messages';
+import UsersInRoomSidebar from './UsersInRoomSidebar';
 
 export default function ChatRoom({ userId, roomId }: { userId: number, roomId: number }) {
   const [newMessage, setNewMessage] = useState('');
@@ -18,22 +19,25 @@ export default function ChatRoom({ userId, roomId }: { userId: number, roomId: n
   };
 
   return (
-    <div className="chat-room">
-      <Messages userId={userId} roomId={roomId} />
-      <div>
-        <input
-          type="text"
-          placeholder="Type a message..."
-          value={newMessage}
-          onChange={(e) => setNewMessage(e.target.value)}
-        />
-        <button
-          type="button"
-          onClick={handleSendMessage}
-        >
-          Send
-        </button>
+    <div className="chat-container">
+      <div id="chat-room">
+        <Messages userId={userId} roomId={roomId} />
+        <div className="chat-input-container">
+          <input
+            type="text"
+            placeholder="Type a message..."
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+          />
+          <button
+            type="button"
+            onClick={handleSendMessage}
+          >
+            Send
+          </button>
+        </div>
       </div>
+      <UsersInRoomSidebar userId={userId} roomId={roomId} />
     </div>
   );
 }
