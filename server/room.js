@@ -79,7 +79,7 @@ var Room = /** @class */ (function () {
             return __generator(this, function (_a) {
                 return [2 /*return*/, prisma_1.default.message.findMany({
                         where: { roomId: this.roomId },
-                        orderBy: { createdAt: 'asc' },
+                        orderBy: { createdAt: 'desc' },
                     })];
             });
         });

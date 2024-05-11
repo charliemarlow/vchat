@@ -34,7 +34,7 @@ class Room {
   async getMessages() {
     return prisma.message.findMany({
       where: { roomId: this.roomId },
-      orderBy: { createdAt: 'asc' },
+      orderBy: { createdAt: 'desc' },
     });
   }
 
