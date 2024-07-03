@@ -5,7 +5,7 @@ import SocketServer from './socketServer';
 import UsersRouter from './routes/users';
 import RoomsRouter from './routes/rooms';
 import prisma from './prisma';
-import publisher from './publisher';
+import redis from './redis';
 
 const app = express();
 
@@ -37,7 +37,7 @@ const shutDown = async () => {
   console.log('Shutting down server');
 
   await prisma.$disconnect();
-  publisher.close();
+  await redis.disconnect();
   wss.close();
   server.close((err) => {
     console.log('Server is shut down', err);

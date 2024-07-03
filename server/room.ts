@@ -1,5 +1,6 @@
 import prisma from './prisma';
-import publisher from './publisher';
+import redis from './redis';
+import AI from './ai';
 
 class Room {
   roomId: number;
@@ -31,10 +32,11 @@ class Room {
     });
   }
 
-  async getMessages() {
+  async getMessages(limit = 100) {
     return prisma.message.findMany({
       where: { roomId: this.roomId },
       orderBy: { createdAt: 'desc' },
+      take: limit,
     });
   }
 
@@ -45,15 +47,21 @@ class Room {
         userId: userId,
         roomId: this.roomId,
       }
-    }).then((message) => {
+    }).then(async (message) => {
       console.log('PUBLISHING MESSAGE', message.id, this.roomId);
-      publisher.publish(
+      redis.publish(
         `room-${this.roomId}`,
         JSON.stringify({
           id: message.id,
           roomId: this.roomId,
         }),
       )
+
+      if (userId === 1) {
+        return;
+      }
+      const chatHistory = await this.getMessages(10);
+      AI.respond(this.roomId, message.id, chatHistory);
     });
   }
 }
